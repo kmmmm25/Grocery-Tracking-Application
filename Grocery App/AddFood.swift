@@ -46,16 +46,25 @@ struct AddFoodView: View {
                 }
             }
             .navigationTitle("新しく登録")
-            // 変更：保存ボタンなどをNavigation Bar（画面上部）に配置
             .navigationBarItems(
                 leading: Button("キャンセル") {
                     presentationMode.wrappedValue.dismiss() // 画面を閉じる
                 },
                 trailing: Button("保存") {
-                    // 入力された情報から新しい食材データを作成
+                    // 入力された情報から新しい食材データを作成（自動でcreatedAtが今になります）
                     let newItem = FoodItem(name: name, expiryDate: expiryDate, image: inputImage)
+                    
                     // ContentViewへデータを渡す
                     onSave(newItem)
+                    
+                    // プッシュ通知をスケジュールする（1日前テスト用の関数のままでも動きます）
+                    let foodId = newItem.id ?? UUID().uuidString
+                    NotificationManager.shared.scheduleExpiryNotifications(
+                        id: foodId,
+                        title: name,
+                        expiryDate: expiryDate
+                    )
+                    
                     // 画面を閉じる
                     presentationMode.wrappedValue.dismiss()
                 }

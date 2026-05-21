@@ -19,7 +19,14 @@
 		0BA880F42FBED9F1009E791B /* Exceptions for "Grocery App" folder in "Grocery App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AddFood.swift,
+				ContentView.swift,
+				FoodItem.swift,
+				FoodListViewModel.swift,
 				"GoogleService-Info.plist",
+				Grocery_AppApp.swift,
+				ImagePicker.swift,
+				NotificationManager.swift,
 			);
 			target = 0BB7D45E2FA7636900BAC100 /* Grocery App */;
 		};
@@ -316,7 +323,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "swift/Grocery App-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;

@@ -12,6 +12,7 @@ struct FoodItem: Identifiable, Codable {
     @DocumentID var id: String?
     var name: String
     var expiryDate: Date
+    var createdAt: Date // 🚀【新機能】追加された日時を記録するプロパティ
     
     // 【追加】将来的にFirebase Storageに保存した写真のURLを入れる枠
     var imageURLString: String?
@@ -21,6 +22,7 @@ struct FoodItem: Identifiable, Codable {
         case id
         case name
         case expiryDate
+        case createdAt // 🚀 忘れずにここにも追加
         case imageURLString
     }
     
@@ -39,7 +41,7 @@ extension FoodItem {
         self.id = nil
         self.name = name
         self.expiryDate = expiryDate
+        self.createdAt = Date() // 🚀 初期値として「作成した瞬間の現在日時」をセットします
         self.imageURLString = nil
-        // ※ 実際の画像データは、今後のステップでFirebaseにアップロードする処理を作ります！
     }
 }
