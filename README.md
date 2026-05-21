@@ -18,3 +18,5 @@ Grocery App (ver1)
 ・Swift / SwiftUI
 
 ・Firebase (Cloud Firestore)
+
+最後に全部書く
