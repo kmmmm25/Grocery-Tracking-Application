@@ -63,3 +63,6 @@ fastlane/test_output
 
 GoogleService-Info.plist
 .DS_Store
+UserInterfaceState.xcuserstate
+xcuserdata/
+*.xcuserdatad
