@@ -13,25 +13,31 @@ import UIKit
 class FoodListViewModel: ObservableObject {
     @Published var foodItems: [FoodItem] = []
     private var db = Firestore.firestore()
+    private var familyID: String
     
+    // 💡 どんな場面からでも安全に初期化できるようにします
     init() {
+        self.familyID = UserDefaults.standard.string(forKey: "savedFamilyID") ?? ""
         fetchData()
     }
     
-    // Firebaseからデータをリアルタイムで取得し、並び替える
+    private var familyFoodsCollection: CollectionReference {
+        return db.collection("families").document(familyID).collection("foods")
+    }
+    
     func fetchData() {
-        db.collection("foods").addSnapshotListener { [weak self] (querySnapshot, error) in
+        guard !familyID.isEmpty else { return }
+        
+        familyFoodsCollection.addSnapshotListener { [weak self] (querySnapshot, error) in
             if let error = error {
                 print("データの取得に失敗しました: \(error.localizedDescription)")
                 return
             }
             
-            // Firebaseから生データを取得
             let rawItems = querySnapshot?.documents.compactMap { document in
                 try? document.data(as: FoodItem.self)
             } ?? []
             
-            // 画面の更新はメインスレッドで安全に行う
             DispatchQueue.main.async {
                 self?.foodItems = rawItems.sorted { item1, item2 in
                     if item1.expiryDate == item2.expiryDate {
@@ -44,44 +50,42 @@ class FoodListViewModel: ObservableObject {
         }
     }
     
-    // Firebaseに新しい食材を追加保存
     func add(item: FoodItem) {
+        guard !familyID.isEmpty else { return }
         do {
-            let _ = try db.collection("foods").addDocument(from: item)
-            print("Firebaseに保存成功！")
+            let _ = try familyFoodsCollection.addDocument(from: item)
+            print("🎉 Firebase（\(familyID)の部屋）に食材を追加しました！")
         } catch {
-            print("Firebaseへの保存に失敗しました: \(error.localizedDescription)")
+            print("追加に失敗しました: \(error.localizedDescription)")
         }
     }
     
-    // Firebaseから食材を削除する機能
-    func delete(item: FoodItem) {
-        guard let id = item.id else { return }
-        db.collection("foods").document(id).delete { error in
-            if let error = error {
-                print("削除に失敗しました: \(error.localizedDescription)")
-            } else {
-                // 🚀【追加】Firebaseから消えたら、iPhone内の写真ファイルも削除する
-                if let imagePath = item.imagePath {
-                    self.deleteImageFromDocuments(fileName: imagePath)
-                }
-                print("Firebaseから削除完了！")
-            }
-        }
-    }
-    
-    // Firebaseの既存データを上書き更新する機能
     func update(item: FoodItem) {
-        guard let id = item.id else { return }
+        guard let id = item.id, !familyID.isEmpty else { return }
         do {
-            try db.collection("foods").document(id).setData(from: item)
-            print("Firebaseのデータ更新成功！")
+            try familyFoodsCollection.document(id).setData(from: item)
+            print("🎉 Firebase（\(familyID)の部屋）のデータ更新成功！")
         } catch {
             print("更新に失敗しました: \(error.localizedDescription)")
         }
     }
     
-    // 🚀【新機能】iPhone内のDocumentsフォルダから写真を読み込む関数
+    func delete(item: FoodItem) {
+        guard let id = item.id, !familyID.isEmpty else { return }
+        
+        familyFoodsCollection.document(id).delete { error in
+            if let error = error {
+                print("削除に失敗しました: \(error.localizedDescription)")
+            } else {
+                print("🗑️ Firebaseから食材を削除しました")
+                if let imagePath = item.imagePath {
+                    self.deleteImageFromDocuments(fileName: imagePath)
+                }
+                NotificationManager.shared.cancelNotifications(for: id)
+            }
+        }
+    }
+    
     func loadImageFromDocuments(fileName: String) -> UIImage? {
         let fileManager = FileManager.default
         let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -94,7 +98,6 @@ class FoodListViewModel: ObservableObject {
         }
     }
     
-    // 🚀【新機能】iPhone内の写真ファイルを削除する関数
     private func deleteImageFromDocuments(fileName: String) -> Void {
         let fileManager = FileManager.default
         let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!

@@ -50,29 +50,28 @@ struct AddFoodView: View {
                     presentationMode.wrappedValue.dismiss()
                 },
                 trailing: Button("保存") {
-                    if var item = existingItem {
-                        // 🚀【編集の場合】写真はそのまま引き継ぐ（今回は簡略化のため写真は編集不可とします）
-                        item.name = name
-                        item.expiryDate = expiryDate
-                        onSave(item)
-                    } else {
-                        // 🚀【新規登録の場合】ここが本番！
-                        let foodId = UUID().uuidString // IDを先に決める
-                        var newItem = FoodItem(name: name, expiryDate: expiryDate, image: inputImage)
-                        newItem.id = foodId
-                        
-                        // 🚀 もし写真があれば、iPhone内に保存してパスを記録する
-                        if let image = inputImage {
-                            if let savedPath = saveImageToDocuments(image: image, fileName: "\(foodId).jpg") {
-                                newItem.imagePath = savedPath
-                            }
+                    var finalImagePath: String? = existingItem?.imagePath
+                    
+                    if let image = inputImage {
+                        let uniqueFileName = "\(UUID().uuidString).jpg"
+                        if let savedName = saveImageToDocuments(image: image, fileName: uniqueFileName) {
+                            finalImagePath = savedName
                         }
-                        
-                        onSave(newItem)
                     }
                     
-                    // 通知の予約
+                    // 新しいFoodItemを作成
                     let foodId = existingItem?.id ?? UUID().uuidString
+                    let newItem = FoodItem(
+                        id: foodId,
+                        name: name,
+                        expiryDate: expiryDate,
+                        createdAt: existingItem?.createdAt ?? Date(),
+                        imagePath: finalImagePath
+                    )
+                    
+                    onSave(newItem)
+                    
+                    // 通知を予約
                     NotificationManager.shared.scheduleExpiryNotifications(
                         id: foodId,
                         title: name,
@@ -90,13 +89,11 @@ struct AddFoodView: View {
                 if let item = existingItem {
                     name = item.name
                     expiryDate = item.expiryDate
-                    // ※写真は現在、imagePathからの復元が必要なため、後ほど実装します
                 }
             }
         }
     }
     
-    // 🚀【新機能】UIImageをiPhone内のDocumentsフォルダにJPEGとして保存する関数
     private func saveImageToDocuments(image: UIImage, fileName: String) -> String? {
         guard let data = image.jpegData(compressionQuality: 0.8) else { return nil }
         
@@ -107,7 +104,7 @@ struct AddFoodView: View {
         do {
             try data.write(to: fileURL)
             print("📸 写真を保存しました: \(fileURL.lastPathComponent)")
-            return fileURL.lastPathComponent // 保存したファイル名だけを返す
+            return fileURL.lastPathComponent
         } catch {
             print("⚠️ 写真の保存に失敗しました: \(error.localizedDescription)")
             return nil

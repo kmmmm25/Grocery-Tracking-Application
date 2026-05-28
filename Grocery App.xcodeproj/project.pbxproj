@@ -21,6 +21,7 @@
 			membershipExceptions = (
 				AddFood.swift,
 				ContentView.swift,
+				FamilyAuthView.swift,
 				FoodDetailView.swift,
 				FoodItem.swift,
 				FoodListViewModel.swift,

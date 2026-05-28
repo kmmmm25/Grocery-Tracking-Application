@@ -8,7 +8,12 @@
 import SwiftUI
 
 struct ContentView: View {
+    // 🚀 AppApp.swift から環境変数経由でログイン中の家族IDを受け取る
+    @Environment(\.currentFamilyID) var currentFamilyID
+    
+    // 🚀 ViewModelをログインしている家族IDに基づいて管理する
     @StateObject private var viewModel = FoodListViewModel()
+    
     @State private var showingAddFoodView = false
     @State private var editingItem: FoodItem? = nil
     
@@ -16,7 +21,7 @@ struct ContentView: View {
     @State private var showingDeleteAlert = false
     @State private var itemToDelete: FoodItem? = nil
 
-    // 🚀【新機能】タップされた食材の詳細を表示するための状態管理
+    // タップされた食材の詳細を表示するための状態管理
     @State private var selectedItemForDetail: FoodItem? = nil
 
     var body: some View {
@@ -33,17 +38,9 @@ struct ContentView: View {
                     
                     Spacer()
                     
-                    // 残り日数に応じたカラーバッジ（あと1日も赤色）
+                    // 残り日数に応じたカラーバッジ
                     if item.daysUntilExpiry < 1 {
                         Text("消費期限切れです")
-                            .foregroundColor(.red)
-                            .font(.caption)
-                            .bold()
-                            .padding(6)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(8)
-                    } else if item.daysUntilExpiry == 1 {
-                        Text("あと 1 日")
                             .foregroundColor(.red)
                             .font(.caption)
                             .bold()
@@ -54,6 +51,7 @@ struct ContentView: View {
                         Text("あと \(item.daysUntilExpiry) 日")
                             .foregroundColor(.orange)
                             .font(.caption)
+                            .bold()
                             .padding(6)
                             .background(Color.orange.opacity(0.1))
                             .cornerRadius(8)
@@ -61,41 +59,64 @@ struct ContentView: View {
                         Text("あと \(item.daysUntilExpiry) 日")
                             .foregroundColor(.green)
                             .font(.caption)
+                            .bold()
                             .padding(6)
                             .background(Color.green.opacity(0.1))
                             .cornerRadius(8)
                     }
                 }
-                .contentShape(Rectangle()) // 行のどこをタップしても反応するようにする魔法の1行
-                // 🚀【新機能】タップした時の動作（詳細ハーフシートを開く）
+                .contentShape(Rectangle()) // 行の空白部分をタップしても反応するようにする設定
                 .onTapGesture {
+                    // タップしたら詳細シートを開く
                     selectedItemForDetail = item
                 }
-                // 長押しで出現するメニュー
-                .contextMenu {
-                    Button(action: {
-                        editingItem = item
-                    }) {
-                        Label("編集する", systemImage: "pencil")
-                    }
-                    
-                    Button(role: .destructive, action: {
-                        // すぐ消さずに、消したい食材をキープしてアラートの旗（フラグ）をONにする
+                // 左スワイプで「編集」「削除」のメニューを出す
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    // 削除ボタン
+                    Button(role: .destructive) {
                         itemToDelete = item
                         showingDeleteAlert = true
-                    }) {
-                        Label("削除する", systemImage: "trash")
+                    } label: {
+                        Label("削除", systemImage: "trash")
                     }
+                    
+                    // 編集ボタン
+                    Button {
+                        editingItem = item
+                    } label: {
+                        Label("編集", systemImage: "pencil")
+                    }
+                    .tint(.orange)
                 }
             }
-            .navigationTitle("食材管理")
+            .navigationTitle("\(currentFamilyID)") // タイトルにログイン中の家族IDを表示
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        editingItem = nil
                         showingAddFoodView = true
                     }) {
                         Image(systemName: "plus")
+                    }
+                }
+                
+                // 🚀 ログアウトボタン
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        // 端末に保存されている家族IDを消去
+                        UserDefaults.standard.removeObject(forKey: "savedFamilyID")
+                        
+                        // 画面を強制的にログイン画面に戻す（UIHostingControllerの引数を rootView: に修正）
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let window = windowScene.windows.first {
+                            window.rootViewController = UIHostingController(
+                                rootView: FamilyAuthView(currentFamilyID: .constant(nil))
+                            )
+                            window.makeKeyAndVisible()
+                        }
+                    }) {
+                        Text("ログアウト")
+                            .font(.subheadline)
+                            .foregroundColor(.red)
                     }
                 }
             }
@@ -105,14 +126,13 @@ struct ContentView: View {
                     viewModel.add(item: newItem)
                 }, existingItem: nil)
             }
-            // 長押し編集
+            // 長押し（スワイプ）編集
             .sheet(item: $editingItem) { itemToEdit in
                 AddFoodView(onSave: { updatedItem in
                     viewModel.update(item: updatedItem)
                 }, existingItem: itemToEdit)
             }
-            // 🚀【新機能】普通にタップした時の「詳細ハーフシート」画面
-            // itemBindable が入ってきたら自動的にシートを開きます
+            // タップした時の「詳細ハーフシート」画面
             .sheet(item: $selectedItemForDetail) { itemToShow in
                 FoodDetailView(item: itemToShow)
             }
